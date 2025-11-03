@@ -12,8 +12,7 @@ processors:
     forest_size: 100
     subsample_size: 256
     contamination_rate: 0.10
-    features:
-      service.name: {}
+    features: ["service.name"]
 
 connectors:
   spanmetrics:
@@ -33,8 +32,10 @@ exporters:
     verbosity: detailed
   prometheusremotewrite:
     endpoint: "http://victoriametrics:8428/api/v1/write"
-  loki:
-    endpoint: "http://victorialogs:9428/loki/api/v1/push"
+  elasticsearch:
+    endpoint: "http://victorialogs:9428/insert/elasticsearch/_bulk"
+    tls:
+      insecure: true
   otlp/jaeger:
     endpoint: "http://victoriatraces:10428"
     tls:
@@ -49,7 +50,7 @@ service:
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [loki, debug]
+      exporters: [elasticsearch, debug]
     traces:
       receivers: [otlp]
       processors: [isolationforest, batch]
