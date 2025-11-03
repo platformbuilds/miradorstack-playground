@@ -8,6 +8,26 @@ receivers:
 
 processors:
   batch:
+  isolationforest:
+    forest_size: 100
+    subsample_size: 256
+    window_size: 1000
+    contamination_rate: 0.10
+    training_interval: 5m
+    features: ["service.name"]
+
+connectors:
+  spanmetrics:
+    histogram:
+      explicit:
+        buckets: [100us, 1ms, 2ms, 6ms, 10ms, 100ms, 250ms]
+    aggregation_cardinality_limit: 1000
+    aggregation_temporality: "AGGREGATION_TEMPORALITY_CUMULATIVE"
+    metrics_flush_interval: 15s
+  servicegraph:
+    store:
+      ttl: 2s
+      max_items: 1000
 
 exporters:
   logging:
@@ -24,7 +44,7 @@ exporters:
 service:
   pipelines:
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, spanmetrics, servicegraph]
       processors: [batch]
       exporters: [prometheusremotewrite, logging]
     logs:
@@ -33,5 +53,5 @@ service:
       exporters: [loki, logging]
     traces:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [otlp/jaeger, logging]
+      processors: [isolationforest, batch]
+      exporters: [spanmetrics, servicegraph, otlp/jaeger, logging]
