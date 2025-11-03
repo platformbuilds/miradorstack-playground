@@ -42,8 +42,7 @@ auth:
     expiry_minutes: 480 # 8 hours for development
 
 cache:
-  nodes:
-    - "localhost:6379"
+  nodes: []
   ttl: 60 # Shorter TTL for development
 
 cors:
@@ -117,7 +116,7 @@ uploads:
 
 # Schema Store Configuration (Weaviate)
 weaviate:
-  enabled: true
+  enabled: false
   scheme: "http"
   host: "localhost"
   port: 8080
