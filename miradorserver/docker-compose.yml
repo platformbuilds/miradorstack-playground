@@ -97,8 +97,7 @@ services:
       - victoriatraces
       - otel-collector
       - valkey
-      - weaviate:
-          condition: service_healthy
+      - weaviate
 
   # Grafana for visualization
   grafana:
