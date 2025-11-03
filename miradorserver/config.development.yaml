@@ -43,7 +43,7 @@ auth:
 
 cache:
   nodes:
-    - "host.docker.internal:6379"
+    - "valkey:6379"
   ttl: 60 # Shorter TTL for development
 
 cors:
@@ -119,8 +119,8 @@ uploads:
 weaviate:
   enabled: true
   scheme: "http"
-  host: "host.docker.internal"
-  port: 8081
+  host: "weaviate"
+  port: 8080
   api_key: "" # Set via environment variable
   consistency: "quorum"
   use_official: true

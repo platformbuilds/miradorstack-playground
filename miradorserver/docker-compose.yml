@@ -46,6 +46,31 @@ services:
     volumes:
       - vt_data:/victoria-traces-data
 
+  # Valkey (Redis-compatible cache)
+  valkey:
+    image: valkey/valkey:latest
+    container_name: mirador-valkey
+    ports:
+      - "6379:6379"
+
+  # Weaviate (vector database)
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.32.8
+    container_name: weaviate
+    ports:
+      - "8080:8080"
+    environment:
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      DEFAULT_VECTORIZER_MODULE: "none"
+      QUERY_DEFAULTS_LIMIT: "25"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      CLUSTER_GOSSIP_BIND_PORT: "7100"
+      CLUSTER_DATA_BIND_PORT: "7101"
+      AUTOSCHEMA_ENABLED: "false"
+      LOG_LEVEL: "debug"
+    volumes:
+      - weavdata:/var/lib/weaviate
+
   # MIRADOR Core
   mirador-core:
     image: localdev_mirador-core:latest
@@ -66,6 +91,8 @@ services:
       - victorialogs
       - victoriatraces
       - otel-collector
+      - valkey
+      - weaviate
 
   # Grafana for visualization
   grafana:
@@ -97,6 +124,7 @@ volumes:
   vl_data:
   vt_data:
   grafana_data:
+  weavdata:
 
 networks:
   default:
