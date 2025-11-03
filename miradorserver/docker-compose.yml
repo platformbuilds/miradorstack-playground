@@ -98,7 +98,7 @@ services:
   grafana:
     image: grafana/grafana-oss:latest
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=platf0rmbu1lds
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
