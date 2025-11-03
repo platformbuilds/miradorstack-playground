@@ -14,15 +14,20 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @RequestMapping("/api")
 @Tag(name = "Data Operations", description = "CRUD operations for key-value data with dual storage (Valkey + Cassandra)")
 public class DataController {
 
+    private static final Logger logger = LoggerFactory.getLogger(DataController.class);
+
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
-    @Autowired
+    @Autowired(required = false)
     private CassandraOperations cassandraOperations;
 
     @GetMapping("/read/{key}")
@@ -38,13 +43,27 @@ public class DataController {
         Map<String, String> result = new HashMap<>();
 
         // Read from Valkey
-        String valkeyValue = redisTemplate.opsForValue().get(key);
-        result.put("valkey", valkeyValue != null ? valkeyValue : "Not found");
+        try {
+            String valkeyValue = redisTemplate.opsForValue().get(key);
+            result.put("valkey", valkeyValue != null ? valkeyValue : "Not found");
+        } catch (Exception e) {
+            logger.warn("Valkey service unavailable", e);
+            result.put("valkey", "Service unavailable");
+        }
 
         // Read from Cassandra
-        KeyValue kv = cassandraOperations.selectOneById(key, KeyValue.class);
-        String cassandraValue = kv != null ? kv.getValue() : "Not found";
-        result.put("cassandra", cassandraValue);
+        if (cassandraOperations != null) {
+            try {
+                KeyValue kv = cassandraOperations.selectOneById(key, KeyValue.class);
+                String cassandraValue = kv != null ? kv.getValue() : "Not found";
+                result.put("cassandra", cassandraValue);
+            } catch (Exception e) {
+                logger.warn("Cassandra service unavailable", e);
+                result.put("cassandra", "Service unavailable");
+            }
+        } else {
+            result.put("cassandra", "Service unavailable");
+        }
 
         return ResponseEntity.ok(result);
     }
@@ -62,10 +81,20 @@ public class DataController {
             @Parameter(description = "The value to store", required = true, example = "myvalue")
             @RequestParam String value) {
         // Create in Valkey
-        redisTemplate.opsForValue().set(key, value);
+        try {
+            redisTemplate.opsForValue().set(key, value);
+        } catch (Exception e) {
+            logger.warn("Valkey service unavailable", e);
+        }
 
         // Create in Cassandra
-        cassandraOperations.insert(new KeyValue(key, value));
+        if (cassandraOperations != null) {
+            try {
+                cassandraOperations.insert(new KeyValue(key, value));
+            } catch (Exception e) {
+                logger.warn("Cassandra service unavailable", e);
+            }
+        }
 
         return ResponseEntity.ok("Created");
     }
@@ -83,12 +112,23 @@ public class DataController {
             @Parameter(description = "The new value", required = true, example = "newvalue")
             @RequestParam String value) {
         // Check if exists in Valkey
-        if (redisTemplate.hasKey(key)) {
-            redisTemplate.opsForValue().set(key, value);
-            cassandraOperations.update(new KeyValue(key, value));
-            return ResponseEntity.ok("Modified");
-        } else {
-            return ResponseEntity.notFound().build();
+        try {
+            if (redisTemplate.hasKey(key)) {
+                redisTemplate.opsForValue().set(key, value);
+                if (cassandraOperations != null) {
+                    try {
+                        cassandraOperations.update(new KeyValue(key, value));
+                    } catch (Exception e) {
+                        logger.warn("Cassandra service unavailable", e);
+                    }
+                }
+                return ResponseEntity.ok("Modified");
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            logger.warn("Valkey service unavailable", e);
+            return ResponseEntity.ok("Modified (Valkey unavailable)");
         }
     }
 
@@ -103,10 +143,20 @@ public class DataController {
             @Parameter(description = "The key to delete", required = true, example = "mykey")
             @PathVariable String key) {
         // Delete from Valkey
-        redisTemplate.delete(key);
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            logger.warn("Valkey service unavailable", e);
+        }
 
         // Delete from Cassandra
-        cassandraOperations.deleteById(key, KeyValue.class);
+        if (cassandraOperations != null) {
+            try {
+                cassandraOperations.deleteById(key, KeyValue.class);
+            } catch (Exception e) {
+                logger.warn("Cassandra service unavailable", e);
+            }
+        }
 
         return ResponseEntity.ok("Deleted");
     }
