@@ -65,9 +65,7 @@ services:
       DEFAULT_VECTORIZER_MODULE: "none"
       QUERY_DEFAULTS_LIMIT: "25"
       PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-      CLUSTER_JOIN: ""
       RAFT_BOOTSTRAP_EXPECT: "1"
-      RAFT_JOIN: ""
       AUTOSCHEMA_ENABLED: "false"
       LOG_LEVEL: "debug"
       CLUSTER_HOSTNAME: 'weaviate'
