@@ -11,10 +11,9 @@ processors:
   isolationforest:
     forest_size: 100
     subsample_size: 256
-    window_size: 1000
     contamination_rate: 0.10
-    training_interval: 5m
-    features: ["service.name"]
+    features:
+      service.name: {}
 
 connectors:
   spanmetrics:
@@ -30,8 +29,8 @@ connectors:
       max_items: 1000
 
 exporters:
-  logging:
-    loglevel: debug
+  debug:
+    verbosity: detailed
   prometheusremotewrite:
     endpoint: "http://victoriametrics:8428/api/v1/write"
   loki:
@@ -46,12 +45,12 @@ service:
     metrics:
       receivers: [otlp, spanmetrics, servicegraph]
       processors: [batch]
-      exporters: [prometheusremotewrite, logging]
+      exporters: [prometheusremotewrite, debug]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [loki, logging]
+      exporters: [loki, debug]
     traces:
       receivers: [otlp]
       processors: [isolationforest, batch]
-      exporters: [spanmetrics, servicegraph, otlp/jaeger, logging]
+      exporters: [spanmetrics, servicegraph, otlp/jaeger, debug]
