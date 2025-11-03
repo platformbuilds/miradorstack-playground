@@ -6,8 +6,10 @@ services:
     container_name: playground-cassandra
     ports:
       - "9042:9042"
+      - "7199:7199"  # JMX port
     environment:
       - CASSANDRA_CLUSTER_NAME=PlaygroundCluster
+      - JVM_OPTS=-Dcassandra.jmx.remote.port=7199 -Dcassandra.jmx.remote.rmi.port=7199 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=localhost
     volumes:
       - cassandra_data:/var/lib/cassandra
     healthcheck:
@@ -15,6 +17,19 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  cassandra-jmx-exporter:
+    image: bitnami/jmx-exporter:latest
+    container_name: playground-cassandra-jmx-exporter
+    ports:
+      - "7070:7070"
+    environment:
+      - JMX_HOST=cassandra
+      - JMX_PORT=7199
+    volumes:
+      - ./cassandra-jmx-config.yml:/opt/bitnami/jmx-exporter/config.yml:ro
+    depends_on:
+      - cassandra
 
   valkey:
     image: valkey/valkey:latest
@@ -29,6 +44,17 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: playground-redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis://valkey:6379
+      - REDIS_PASSWORD=
+    depends_on:
+      - valkey
 
   node-exporter:
     image: prom/node-exporter:latest
