@@ -15,6 +15,7 @@
     <description>Demo playground app</description>
     <properties>
         <java.version>21</java.version>
+        <logback.version>1.4.14</logback.version>
     </properties>
     <dependencyManagement>
         <dependencies>

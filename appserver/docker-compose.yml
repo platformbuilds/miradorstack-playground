@@ -11,7 +11,7 @@ services:
     volumes:
       - cassandra_data:/var/lib/cassandra
     healthcheck:
-      test: ["CMD-SHELL", "cqlsh -u cassandra -p cassandra -e 'describe cluster'"]
+      test: ["CMD", "nodetool", "status"]
       interval: 30s
       timeout: 10s
       retries: 5
