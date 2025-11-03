@@ -86,7 +86,7 @@ services:
       - "443:443"
     volumes:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
-      - haproxy_ssl:/etc/ssl/certs
+      - /etc/ssl/certs:/etc/ssl/certs:ro
     depends_on:
       - grafana
 
@@ -95,7 +95,6 @@ volumes:
   vl_data:
   vt_data:
   grafana_data:
-  haproxy_ssl:
 
 networks:
   default:
