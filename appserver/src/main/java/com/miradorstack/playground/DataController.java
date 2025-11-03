@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -66,6 +70,22 @@ public class DataController {
         }
 
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/list")
+    @Operation(summary = "List all keys",
+               description = "Retrieves all keys from Valkey storage system")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Keys retrieved successfully")
+    })
+    public ResponseEntity<List<String>> list() {
+        try {
+            Set<String> keysSet = redisTemplate.keys("*");
+            return ResponseEntity.ok(new ArrayList<>(keysSet));
+        } catch (Exception e) {
+            logger.warn("Valkey service unavailable", e);
+            return ResponseEntity.ok(Collections.emptyList());
+        }
     }
 
     @PostMapping("/create")

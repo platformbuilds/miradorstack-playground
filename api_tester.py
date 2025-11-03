@@ -78,9 +78,23 @@ def delete_key():
     else:
         print("No keys available to delete")
 
+def list_keys():
+    try:
+        response = requests.get(f"{BASE_URL}/list")
+        if response.status_code == 200:
+            keys_list = response.json()
+            print(f"Listed keys: {keys_list}")
+            # Update global keys set to match server state
+            global keys
+            keys = set(keys_list)
+        else:
+            print(f"Failed to list keys, Status: {response.status_code}")
+    except Exception as e:
+        print(f"Error listing keys: {e}")
+
 def main():
     signal.signal(signal.SIGINT, signal_handler)
-    operations = [create_key, read_key, modify_key, delete_key]
+    operations = [create_key, read_key, modify_key, delete_key, list_keys]
 
     print("Starting API invocation script. Press Ctrl+C to stop.")
     print(f"Base URL: {BASE_URL}")
