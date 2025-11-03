@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    ports:
+      - "4317:4317"  # gRPC
+      - "4318:4318"  # HTTP
+      - "55679:55679"  # zPages
+    volumes:
+      - ./otel-config.yaml:/etc/otel/config.yaml
+    command: ["--config", "/etc/otel/config.yaml"]
+
+  # VictoriaMetrics for metrics
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    ports:
+      - "8428:8428"
+    command:
+      - '--storageDataPath=/victoria-metrics-data'
+      - '--httpListenAddr=:8428'
+      - '--retentionPeriod=1'  # Short retention for demo
+    volumes:
+      - vm_data:/victoria-metrics-data
+
+  # VictoriaLogs for logs
+  victorialogs:
+    image: victoriametrics/victoria-logs:latest
+    ports:
+      - "9428:9428"
+    command:
+      - '--storageDataPath=/victoria-logs-data'
+      - '--httpListenAddr=:9428'
+    volumes:
+      - vl_data:/victoria-logs-data
+
+  # VictoriaTraces for traces
+  victoriatraces:
+    image: victoriametrics/victoria-traces:latest
+    ports:
+      - "10428:10428"
+    command:
+      - '--storageDataPath=/victoria-traces-data'
+      - '--httpListenAddr=:10428'
+    volumes:
+      - vt_data:/victoria-traces-data
+
+  # MIRADOR Core
+  mirador-core:
+    build:
+      context: ../mirador-core
+      dockerfile: Dockerfile
+    ports:
+      - "8010:8010"
+      - "9090:9090"
+    environment:
+      - ENVIRONMENT=development
+      - CONFIG_PATH=/configs/config.development.yaml
+      - LOG_LEVEL=debug
+      - VM_ENDPOINTS=http://victoriametrics:8428
+      - VL_ENDPOINTS=http://victorialogs:9428
+      - VT_ENDPOINTS=http://victoriatraces:10428
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+      - otel-collector
+
+  # MIRADOR RCA
+  mirador-rca:
+    build:
+      context: ../mirador-rca
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"  # Assuming it runs on 8080
+    depends_on:
+      - vllm-lmcache
+
+  # vLLM for RCA
+  vllm-lmcache:
+    image: vllm/vllm-openai:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL=facebook/opt-125m
+      - LM_CACHE_ENABLE=True
+      - LM_CACHE_MAX_CACHE_SIZE=2GB
+    command: >
+      --model facebook/opt-125m
+      --host 0.0.0.0
+      --port 8000
+      --max-model-len 1024
+      --enforce-eager
+    volumes:
+      - vllm_cache:/root/.cache/vllm
+
+volumes:
+  vm_data:
+  vl_data:
+  vt_data:
+  vllm_cache:
