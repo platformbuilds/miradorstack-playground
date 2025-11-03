@@ -95,11 +95,38 @@ services:
     volumes:
       - vllm_cache:/root/.cache/vllm
 
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana-oss:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+
+  # HAProxy for load balancing and SSL termination
+  haproxy:
+    image: haproxy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - haproxy_ssl:/etc/ssl/certs
+    depends_on:
+      - grafana
+
 volumes:
   vm_data:
   vl_data:
   vt_data:
   vllm_cache:
+  grafana_data:
+  haproxy_ssl:
 
 networks:
   default:
