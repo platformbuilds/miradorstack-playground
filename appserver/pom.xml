@@ -20,8 +20,15 @@
         <dependencies>
             <dependency>
                 <groupId>io.opentelemetry</groupId>
-                <artifactId>opentelemetry-bom</artifactId>
-                <version>1.32.0</version>
+                <artifactId>opentelemetry-bom-alpha</artifactId>
+                <version>1.32.0-alpha</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom-alpha</artifactId>
+                <version>1.32.0-alpha</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -35,7 +42,6 @@
         <dependency>
             <groupId>io.opentelemetry.instrumentation</groupId>
             <artifactId>opentelemetry-spring-boot-starter</artifactId>
-            <version>1.32.0-alpha</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
