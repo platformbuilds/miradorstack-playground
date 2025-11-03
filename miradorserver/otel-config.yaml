@@ -12,7 +12,6 @@ processors:
     forest_size: 100
     subsample_size: 256
     contamination_rate: 0.10
-    features: ["service.name"]
 
 connectors:
   spanmetrics:
@@ -45,7 +44,7 @@ service:
   pipelines:
     metrics:
       receivers: [otlp, spanmetrics, servicegraph]
-      processors: [batch]
+      processors: [isolationforest, batch]
       exporters: [prometheusremotewrite, debug]
     logs:
       receivers: [otlp]
@@ -53,5 +52,5 @@ service:
       exporters: [elasticsearch, debug]
     traces:
       receivers: [otlp]
-      processors: [isolationforest, batch]
+      processors: [batch]
       exporters: [spanmetrics, servicegraph, otlp/jaeger, debug]
