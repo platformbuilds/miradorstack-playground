@@ -43,7 +43,7 @@ auth:
 
 cache:
   nodes:
-    - "localdev_valkey_1:6379"
+    - "host.docker.internal:6379"
   ttl: 60 # Shorter TTL for development
 
 cors:
