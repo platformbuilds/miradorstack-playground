@@ -6,15 +6,15 @@ log_level: debug
 database:
   victoria_metrics:
     endpoints:
-      - "http://victoriametrics:8428"
+      - "http://miradorserver_victoriametrics_1:8428"
     timeout: 10000
   victoria_logs:
     endpoints:
-      - "http://victorialogs:9428"
+      - "http://miradorserver_victorialogs_1:9428"
     timeout: 10000
   victoria_traces:
     endpoints:
-      - "http://victoriatraces:10428"
+      - "http://miradorserver_victoriatraces_1:10428"
     timeout: 10000
 
 grpc:
@@ -42,7 +42,8 @@ auth:
     expiry_minutes: 480 # 8 hours for development
 
 cache:
-  nodes: []
+  nodes:
+    - "localdev_valkey_1:6379"
   ttl: 60 # Shorter TTL for development
 
 cors:
@@ -118,7 +119,7 @@ uploads:
 weaviate:
   enabled: true
   scheme: "http"
-  host: "weaviate"
+  host: "localdev_weaviate_1"
   port: 8080
   api_key: "" # Set via environment variable
   consistency: "quorum"
