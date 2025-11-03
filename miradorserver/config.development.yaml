@@ -119,7 +119,7 @@ uploads:
 weaviate:
   enabled: true
   scheme: "http"
-  host: "localdev_weaviate_1"
+  host: "weaviate"
   port: 8080
   api_key: "" # Set via environment variable
   consistency: "quorum"
