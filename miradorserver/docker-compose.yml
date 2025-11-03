@@ -67,7 +67,7 @@ services:
       PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
       AUTOSCHEMA_ENABLED: "false"
       LOG_LEVEL: "debug"
-      CLUSTER_HOSTNAME: 'node1'
+      CLUSTER_HOSTNAME: 'weaviate'
     volumes:
       - weavdata:/var/lib/weaviate
     healthcheck:
