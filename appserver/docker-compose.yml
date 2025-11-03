@@ -53,3 +53,8 @@ services:
 volumes:
   cassandra_data:
   valkey_data:
+
+networks:
+  default:
+    external:
+      name: miradorstack-playnet

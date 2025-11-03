@@ -100,3 +100,8 @@ volumes:
   vl_data:
   vt_data:
   vllm_cache:
+
+networks:
+  default:
+    external:
+      name: miradorstack-playnet
