@@ -1,0 +1,17 @@
+# Development configuration for Mirador Core
+environment: development
+log_level: debug
+
+# VictoriaMetrics endpoints
+victoria_metrics:
+  endpoints: "http://victoriametrics:8428"
+
+victoria_logs:
+  endpoints: "http://victorialogs:9428"
+
+victoria_traces:
+  endpoints: "http://victoriatraces:10428"
+
+# OpenTelemetry collector
+otel_collector:
+  endpoint: "http://otel-collector:4317"

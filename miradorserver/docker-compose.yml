@@ -52,6 +52,8 @@ services:
     ports:
       - "8010:8010"
       - "9090:9090"
+    volumes:
+      - ./config.development.yaml:/configs/config.development.yaml:ro
     environment:
       - ENVIRONMENT=development
       - CONFIG_PATH=/configs/config.development.yaml
