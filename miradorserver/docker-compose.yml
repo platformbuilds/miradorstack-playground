@@ -60,16 +60,20 @@ services:
     container_name: weaviate
     ports:
       - "8080:8080"
+      # - "50051:50051"  # only if you use gRPC
     restart: unless-stopped
     environment:
+      CLUSTER_HOSTNAME: "node-1"                 # <— add this
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
       DEFAULT_VECTORIZER_MODULE: "none"
       QUERY_DEFAULTS_LIMIT: "25"
       PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-      CLUSTER_GOSSIP_BIND_PORT: "7100"
-      CLUSTER_DATA_BIND_PORT: "7101"
       AUTOSCHEMA_ENABLED: "false"
       LOG_LEVEL: "debug"
+      # DO NOT set CLUSTER_JOIN / RAFT_* on single-node
+      # REMOVE the two lines below if they exist:
+      # CLUSTER_GOSSIP_BIND_PORT: "7100"
+      # CLUSTER_DATA_BIND_PORT: "7101"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/v1/.well-known/ready"]
       interval: 5s
