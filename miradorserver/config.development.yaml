@@ -116,9 +116,9 @@ uploads:
 
 # Schema Store Configuration (Weaviate)
 weaviate:
-  enabled: false
+  enabled: true
   scheme: "http"
-  host: "localhost"
+  host: "weaviate"
   port: 8080
   api_key: "" # Set via environment variable
   consistency: "quorum"
