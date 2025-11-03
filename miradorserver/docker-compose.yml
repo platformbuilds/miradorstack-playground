@@ -48,9 +48,7 @@ services:
 
   # MIRADOR Core
   mirador-core:
-    build:
-      context: ../mirador-core
-      dockerfile: Dockerfile
+    image: localdev_mirador-core:latest
     ports:
       - "8010:8010"
       - "9090:9090"
@@ -66,34 +64,6 @@ services:
       - victorialogs
       - victoriatraces
       - otel-collector
-
-  # MIRADOR RCA
-  mirador-rca:
-    build:
-      context: ../mirador-rca
-      dockerfile: Dockerfile
-    ports:
-      - "8082:8080"  # Assuming it runs on 8080
-    depends_on:
-      - vllm-lmcache
-
-  # vLLM for RCA
-  vllm-lmcache:
-    image: vllm/vllm-openai:latest
-    ports:
-      - "8000:8000"
-    environment:
-      - MODEL=facebook/opt-125m
-      - LM_CACHE_ENABLE=True
-      - LM_CACHE_MAX_CACHE_SIZE=2GB
-    command: >
-      --model facebook/opt-125m
-      --host 0.0.0.0
-      --port 8000
-      --max-model-len 1024
-      --enforce-eager
-    volumes:
-      - vllm_cache:/root/.cache/vllm
 
   # Grafana for visualization
   grafana:
@@ -124,7 +94,6 @@ volumes:
   vm_data:
   vl_data:
   vt_data:
-  vllm_cache:
   grafana_data:
   haproxy_ssl:
 
