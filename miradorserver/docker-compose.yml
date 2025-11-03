@@ -55,27 +55,28 @@ services:
 
   # Weaviate (vector database)
   weaviate:
-    image: cr.weaviate.io/semitechnologies/weaviate:1.33.3
+    image: cr.weaviate.io/semitechnologies/weaviate:1.32.8
+    pull_policy: if_not_present
     container_name: weaviate
     ports:
       - "8080:8080"
-      - "50051:50051"
+    restart: unless-stopped
     environment:
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
       DEFAULT_VECTORIZER_MODULE: "none"
       QUERY_DEFAULTS_LIMIT: "25"
       PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-      RAFT_BOOTSTRAP_EXPECT: "1"
+      CLUSTER_GOSSIP_BIND_PORT: "7100"
+      CLUSTER_DATA_BIND_PORT: "7101"
       AUTOSCHEMA_ENABLED: "false"
       LOG_LEVEL: "debug"
-      CLUSTER_HOSTNAME: 'weaviate'
-    volumes:
-      - weavdata:/var/lib/weaviate
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/v1/.well-known/ready"]
       interval: 5s
       timeout: 3s
       retries: 30
+    volumes:
+      - weavdata:/var/lib/weaviate
 
   # MIRADOR Core
   mirador-core:
