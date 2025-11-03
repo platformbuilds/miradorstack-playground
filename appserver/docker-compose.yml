@@ -30,6 +30,16 @@ services:
       timeout: 10s
       retries: 5
 
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: playground-node-exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+
   springbootapp:
     build: .
     container_name: playground-springboot
