@@ -16,7 +16,7 @@ A Spring Boot application that demonstrates basic CRUD operations with dual stor
 **Services:**
 - Spring Boot app on port 8081
 - Valkey (Redis-compatible) on port 6380
-- Cassandra on port 9042 (simulated with Redis for demo)
+- Cassandra on port 9042
 
 **API Documentation:**
 - Swagger UI: http://localhost:8081/swagger-ui.html
@@ -69,7 +69,7 @@ Open http://localhost:8081/swagger-ui.html in your browser to explore and test t
 ## Architecture
 
 The playground demonstrates:
-1. **Data Layer**: Valkey for caching, Cassandra for persistence (simulated)
+1. **Data Layer**: Valkey for caching, Cassandra for persistence
 2. **Application Layer**: Spring Boot REST API with OpenAPI/Swagger documentation
 3. **Observability Layer**: OTEL for telemetry, VictoriaMetrics for metrics/logs/traces, MiradorStack for analysis
 

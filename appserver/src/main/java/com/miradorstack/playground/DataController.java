@@ -1,6 +1,7 @@
 package com.miradorstack.playground;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.cassandra.core.CassandraOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,9 @@ public class DataController {
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
+    @Autowired
+    private CassandraOperations cassandraOperations;
+
     @GetMapping("/read/{key}")
     @Operation(summary = "Read data from both storage systems",
                description = "Retrieves the value for a given key from both Valkey (cache) and Cassandra (persistent storage)")
@@ -37,9 +41,10 @@ public class DataController {
         String valkeyValue = redisTemplate.opsForValue().get(key);
         result.put("valkey", valkeyValue != null ? valkeyValue : "Not found");
 
-        // Simulate Cassandra read (for demo, using Redis with prefix)
-        String cassandraValue = redisTemplate.opsForValue().get("cassandra_" + key);
-        result.put("cassandra", cassandraValue != null ? cassandraValue : "Not found");
+        // Read from Cassandra
+        KeyValue kv = cassandraOperations.selectOneById(key, KeyValue.class);
+        String cassandraValue = kv != null ? kv.getValue() : "Not found";
+        result.put("cassandra", cassandraValue);
 
         return ResponseEntity.ok(result);
     }
@@ -59,8 +64,8 @@ public class DataController {
         // Create in Valkey
         redisTemplate.opsForValue().set(key, value);
 
-        // Simulate create in Cassandra
-        redisTemplate.opsForValue().set("cassandra_" + key, value);
+        // Create in Cassandra
+        cassandraOperations.insert(new KeyValue(key, value));
 
         return ResponseEntity.ok("Created");
     }
@@ -80,7 +85,7 @@ public class DataController {
         // Check if exists in Valkey
         if (redisTemplate.hasKey(key)) {
             redisTemplate.opsForValue().set(key, value);
-            redisTemplate.opsForValue().set("cassandra_" + key, value);
+            cassandraOperations.update(new KeyValue(key, value));
             return ResponseEntity.ok("Modified");
         } else {
             return ResponseEntity.notFound().build();
@@ -100,8 +105,8 @@ public class DataController {
         // Delete from Valkey
         redisTemplate.delete(key);
 
-        // Simulate delete from Cassandra
-        redisTemplate.delete("cassandra_" + key);
+        // Delete from Cassandra
+        cassandraOperations.deleteById(key, KeyValue.class);
 
         return ResponseEntity.ok("Deleted");
     }
