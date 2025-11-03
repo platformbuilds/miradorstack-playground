@@ -119,8 +119,8 @@ uploads:
 weaviate:
   enabled: true
   scheme: "http"
-  host: "weaviate"
-  port: 8080
+  host: "host.docker.internal"
+  port: 8081
   api_key: "" # Set via environment variable
   consistency: "quorum"
   use_official: true
