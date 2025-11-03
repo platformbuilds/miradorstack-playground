@@ -23,7 +23,7 @@ processors:
 
 exporters:
   otlp:
-    endpoint: "otel-collector:4318"
+    endpoint: "210.79.129.97:4318"
     tls:
       insecure: true
   debug:
