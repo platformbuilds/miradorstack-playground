@@ -26,20 +26,20 @@ exporters:
     endpoint: "otel-collector:4318"
     tls:
       insecure: true
-  logging:
-    loglevel: debug
+  debug:
+    verbosity: detailed
 
 service:
   pipelines:
     metrics:
       receivers: [otlp, prometheus]
       processors: [batch]
-      exporters: [otlp, logging]
+      exporters: [otlp, debug]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, logging]
+      exporters: [otlp, debug]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, logging]
+      exporters: [otlp, debug]
