@@ -55,4 +55,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [spanmetrics, servicegraph, otlp/jaeger, debug]
+      exporters: [spanmetrics, servicegraph, otlphttp, debug]
