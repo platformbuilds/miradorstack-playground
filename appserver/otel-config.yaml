@@ -26,9 +26,7 @@ processors:
 
 exporters:
   otlp:
-    endpoint: "10.0.0.12:4318"
-    tls:
-      insecure: true
+    endpoint: "10.0.0.12:4317"
 
   prometheusremotewrite:
     endpoint: "http://10.0.0.12:8428/api/v1/write"
