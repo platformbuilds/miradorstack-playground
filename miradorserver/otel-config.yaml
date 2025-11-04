@@ -29,22 +29,23 @@ connectors:
 exporters:
   debug:
     verbosity: detailed
+    
   prometheusremotewrite:
     endpoint: "http://victoriametrics:8428/api/v1/write"
+
   elasticsearch:
-    endpoint: "http://victorialogs:9428/insert/elasticsearch/_bulk"
-    tls:
-      insecure: true
+    endpoint: "http://victorialogs:9428/insert/elasticsearch"
+    headers:
+      VL-Msg-Field: Body
+
   otlp/jaeger:
-    endpoint: "http://victoriatraces:10428"
-    tls:
-      insecure: true
+    endpoint: "http://victoriatraces:10428/insert/opentelemetry/v1/traces"
 
 service:
   pipelines:
     metrics:
       receivers: [otlp, spanmetrics, servicegraph]
-      processors: [isolationforest, batch]
+      processors: [isolationforest]
       exporters: [prometheusremotewrite, debug]
     logs:
       receivers: [otlp]
