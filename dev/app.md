@@ -22,14 +22,28 @@ This document provides a deep technical dive into the engineering implementation
 ## API Deep Dive
 
 ### Read Key (`GET /api/read/{key}`)
-#### Execution Flow (Step-by-Step)
-1. Client sends GET request to `/api/read/{key}`
-2. `DataController.read(key)` is invoked
-3. Read value from Valkey using `redisTemplate.opsForValue().get(key)`
-4. Read value from Cassandra using `cassandraOperations.selectOneById(key, KeyValue.class)`
-5. Handle results and service unavailability for both stores
-6. Build response map with results from Valkey and Cassandra
-7. Return `ResponseEntity<Map<String, String>>` to client
+#### Execution Flow (ASCII Flow Chart)
+```
+Client Request: GET /api/read/{key}
+    |
+    v
+DataController.read(key)
+    |
+    v
+-----------------------------
+|  Read from Valkey          |
+|  Read from Cassandra       |
+-----------------------------
+    |
+    v
+Handle results/service errors
+    |
+    v
+Build response map
+    |
+    v
+Return ResponseEntity<Map<String, String>>
+```
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `read(String key)`
@@ -44,12 +58,22 @@ This document provides a deep technical dive into the engineering implementation
 ---
 
 ### List Keys (`GET /api/list`)
-#### Execution Flow (Step-by-Step)
-1. Client sends GET request to `/api/list`
-2. `DataController.list()` is invoked
-3. Fetch all keys from Valkey using `redisTemplate.keys("*")`
-4. Convert the set of keys to a list
-5. Return `ResponseEntity<List<String>>` to client
+#### Execution Flow (ASCII Flow Chart)
+```
+Client Request: GET /api/list
+    |
+    v
+DataController.list()
+    |
+    v
+Fetch all keys from Valkey
+    |
+    v
+Convert Set to List
+    |
+    v
+Return ResponseEntity<List<String>>
+```
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `list()`
@@ -60,13 +84,25 @@ This document provides a deep technical dive into the engineering implementation
 ---
 
 ### Create Key-Value (`POST /api/create`)
-#### Execution Flow (Step-by-Step)
-1. Client sends POST request to `/api/create` with `key` and `value` parameters
-2. `DataController.create(key, value)` is invoked
-3. Store key-value in Valkey using `redisTemplate.opsForValue().set(key, value)`
-4. Store key-value in Cassandra using `cassandraOperations.insert(new KeyValue(key, value))`
-5. Handle results and service unavailability for both stores
-6. Return `ResponseEntity<String>` ("Created") to client
+#### Execution Flow (ASCII Flow Chart)
+```
+Client Request: POST /api/create
+    |
+    v
+DataController.create(key, value)
+    |
+    v
+-----------------------------
+| Store in Valkey            |
+| Store in Cassandra         |
+-----------------------------
+    |
+    v
+Handle results/service errors
+    |
+    v
+Return ResponseEntity<String> ("Created")
+```
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `create(String key, String value)`
@@ -79,16 +115,28 @@ This document provides a deep technical dive into the engineering implementation
 ---
 
 ### Modify Key-Value (`PUT /api/modify/{key}`)
-#### Execution Flow (Step-by-Step)
-1. Client sends PUT request to `/api/modify/{key}` with `value` parameter
-2. `DataController.modify(key, value)` is invoked
-3. Check if key exists in Valkey using `redisTemplate.hasKey(key)`
-4. If key exists:
-    - Update value in Valkey using `redisTemplate.opsForValue().set(key, value)`
-    - Update value in Cassandra using `cassandraOperations.update(new KeyValue(key, value))`
-    - Return `ResponseEntity<String>` ("Modified")
-5. If key does not exist:
-    - Return 404 Not Found
+#### Execution Flow (ASCII Flow Chart)
+```
+Client Request: PUT /api/modify/{key}
+                |
+                v
+DataController.modify(key, value)
+                |
+                v
+Check if key exists in Valkey
+                |
+            /   \
+         v     v
+Exists   Not Exists
+    |         |
+    v         v
+Update in   Return 404
+Valkey &
+Cassandra
+    |
+    v
+Return ResponseEntity<String> ("Modified")
+```
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `modify(String key, String value)`
@@ -99,13 +147,25 @@ This document provides a deep technical dive into the engineering implementation
 ---
 
 ### Delete Key-Value (`DELETE /api/delete/{key}`)
-#### Execution Flow (Step-by-Step)
-1. Client sends DELETE request to `/api/delete/{key}`
-2. `DataController.delete(key)` is invoked
-3. Delete key from Valkey using `redisTemplate.delete(key)`
-4. Delete key from Cassandra using `cassandraOperations.deleteById(key, KeyValue.class)`
-5. Handle results and service unavailability for both stores
-6. Return `ResponseEntity<String>` ("Deleted") to client
+#### Execution Flow (ASCII Flow Chart)
+```
+Client Request: DELETE /api/delete/{key}
+    |
+    v
+DataController.delete(key)
+    |
+    v
+-----------------------------
+| Delete from Valkey         |
+| Delete from Cassandra      |
+-----------------------------
+    |
+    v
+Handle results/service errors
+    |
+    v
+Return ResponseEntity<String> ("Deleted")
+```
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `delete(String key)`
