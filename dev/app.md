@@ -1,233 +1,183 @@
-# MiradorStack Playground API – Deep Dive Engineering Document
+## MiradorStack Playground — Deep Dive: API Flow & Source Mapping
+
+This document maps every REST API implemented in the codebase to the exact classes and methods that participate in handling the request. Each flow uses code-level hops so you can jump back to the source.
+
+**Repository files referenced:**
+ - [appserver/src/main/java/com/miradorstack/playground/DataController.java](appserver/src/main/java/com/miradorstack/playground/DataController.java)
+ - [appserver/src/main/java/com/miradorstack/playground/KeyValue.java](appserver/src/main/java/com/miradorstack/playground/KeyValue.java)
+ - [appserver/src/main/java/com/miradorstack/playground/PlaygroundApplication.java](appserver/src/main/java/com/miradorstack/playground/PlaygroundApplication.java)
+ - [appserver/src/main/java/com/miradorstack/playground/OpenApiConfig.java](appserver/src/main/java/com/miradorstack/playground/OpenApiConfig.java)
+ - [appserver/src/main/java/com/miradorstack/playground/RootRedirectController.java](appserver/src/main/java/com/miradorstack/playground/RootRedirectController.java)
 
 ---
 
-## Table of Contents
-1. [Overview](#overview)
-2. [API Deep Dive](#api-deep-dive)
-    - [Read Key (`GET /api/read/{key}`)](#read-key-get-apireadkey)
-    - [List Keys (`GET /api/list`)](#list-keys-get-apilist)
-    - [Create Key-Value (`POST /api/create`)](#create-key-value-post-apicreate)
-    - [Modify Key-Value (`PUT /api/modify/{key}`)](#modify-key-value-put-apimodifykey)
-    - [Delete Key-Value (`DELETE /api/delete/{key}`)](#delete-key-value-delete-apideletekey)
-3. [Class Implementation Details](#class-implementation-details)
+**Notes about methodology**
+ - All hops and function names below are taken directly from the source files linked above. No behavior beyond the code was assumed.
 
 ---
 
-## Overview
-This document provides a deep technical dive into the engineering implementation of each API in the MiradorStack Playground application. For each API, a flow chart illustrates the execution path, and all classes and functions involved are described in detail.
+## Common building blocks (source-level)
+
+ - `DataController` (see [DataController.java](appserver/src/main/java/com/miradorstack/playground/DataController.java))
+	 - REST controller that provides all `/api` endpoints.
+	 - Uses an injected `RedisTemplate<String,String>` field named `redisTemplate`.
+	 - Uses an injected `CassandraOperations` field named `cassandraOperations` (nullable; `@Autowired(required = false)`).
+	 - Logger: private static final `logger` (SLF4J) used for `logger.warn(...)` on exceptions.
+ - `KeyValue` (see [KeyValue.java](appserver/src/main/java/com/miradorstack/playground/KeyValue.java))
+	 - POJO mapped to Cassandra table `key_value`.
+	 - Primary fields: `key` (primary key) and `value` with getters/setters and constructors.
+ - `PlaygroundApplication` (see [PlaygroundApplication.java](appserver/src/main/java/com/miradorstack/playground/PlaygroundApplication.java))
+	 - Main Spring Boot application entrypoint. Cassandra auto-config is explicitly excluded via `@SpringBootApplication(exclude = {CassandraAutoConfiguration.class, CassandraDataAutoConfiguration.class})`.
+ - `OpenApiConfig` (see [OpenApiConfig.java](appserver/src/main/java/com/miradorstack/playground/OpenApiConfig.java))
+	 - Defines an `OpenAPI` bean used by springdoc to provide API docs.
+ - `RootRedirectController` (see [RootRedirectController.java](appserver/src/main/java/com/miradorstack/playground/RootRedirectController.java))
+	 - Redirects root (`/`) to the Swagger UI: `redirectToSwagger()` returns `new RedirectView("/swagger-ui/index.html")`.
 
 ---
 
-## API Deep Dive
+## API-by-API deep dives
 
-### Read Key (`GET /api/read/{key}`)
-#### Execution Flow (Class & Function Reference)
+Important: every flow below uses only classes/method names present in the project or explicitly invoked by them. External library method names are included where invoked directly in source.
+
+1) GET /api/read/{key}
+
+Mermaid flowchart (code-level hops):
+
+```mermaid
+flowchart TD
+	A[HTTP GET /api/read/{key}]
+	B[`DataController.read(String key)`]
+	A --> B
+	B --> C1[call: `redisTemplate.opsForValue().get(key)`]
+	B --> C2[conditional: `if (cassandraOperations != null)`]
+	C2 --> D1[call: `cassandraOperations.selectOneById(key, KeyValue.class)`]
+	D1 --> E1[`KeyValue.getValue()` if result != null]
+	C2 -->|else| E2[put "Service unavailable" for cassandra]
+	C1 --> F1[map valkey -> result.put("valkey", value or "Not found")]
+	D1 --> F2[map cassandra -> result.put("cassandra", value or "Not found")]
+	B --> G[return `ResponseEntity.ok(result)`]
 ```
-Client Request: GET /api/read/{key}
-    |
-    v
-com.miradorstack.playground.DataController.read(String key)
-    |
-    v
-com.miradorstack.playground.DataController -> redisTemplate.opsForValue().get(key) [Valkey]
-    |
-    v
-com.miradorstack.playground.DataController -> cassandraOperations.selectOneById(key, KeyValue.class) [Cassandra]
-    |
-    v
-com.miradorstack.playground.DataController (handle results/service errors)
-    |
-    v
-com.miradorstack.playground.DataController (build response map)
-    |
-    v
-com.miradorstack.playground.DataController (return ResponseEntity<Map<String, String>>)
+
+Hops explained (source references):
+ - Request: `GET /api/read/{key}` mapped by `@GetMapping("/read/{key}")` in `DataController.read` ([DataController.java]).
+ - `DataController.read` constructs `Map<String,String> result`.
+ - Valkey path: calls `redisTemplate.opsForValue().get(key)` — result placed into `result.put("valkey", ...)`. On exception `logger.warn("Valkey service unavailable", e)` and places `"Service unavailable"`.
+ - Cassandra path: if `cassandraOperations` is non-null, calls `cassandraOperations.selectOneById(key, KeyValue.class)`. If `kv != null` uses `kv.getValue()`; otherwise uses `"Not found"`. On exception `logger.warn("Cassandra service unavailable", e)` and places `"Service unavailable"`.
+ - Final response created with `ResponseEntity.ok(result)`.
+
+2) GET /api/list
+
+Mermaid flowchart:
+
+```mermaid
+flowchart TD
+	A[HTTP GET /api/list]
+	B[`DataController.list()`]
+	A --> B
+	B --> C[call: `redisTemplate.keys("*")`]
+	C --> D[wrap Set<String> into `new ArrayList<>(keysSet)`]
+	B --> E[`ResponseEntity.ok(list)`]
+	B -->|exception| F[logger.warn(...); return `ResponseEntity.ok(Collections.emptyList())`]
 ```
-#### Implementation Details
-- **Class:** `DataController`
-- **Method:** `read(String key)`
-    - Reads value from Valkey (Redis) and Cassandra.
-    - Handles service unavailability and missing keys.
-    - Returns a map with results from both stores.
-- **Supporting Classes:**
-    - `RedisTemplate<String, String>`: For Valkey operations.
-    - `CassandraOperations`: For Cassandra operations.
-    - `KeyValue`: Data model for Cassandra.
+
+Hops explained:
+ - Request: `@GetMapping("/list")` -> `DataController.list()`.
+ - `list()` calls `redisTemplate.keys("*")` and returns the keys as a `List<String>` (new ArrayList from the returned Set).
+ - On exception, logs `Valkey service unavailable` and returns an empty list via `ResponseEntity.ok(Collections.emptyList())`.
+
+3) POST /api/create (parameters: `key`, `value`)
+
+Mermaid flowchart:
+
+```mermaid
+flowchart TD
+	A[HTTP POST /api/create?key=...&value=...]
+	B[`DataController.create(String key, String value)`]
+	A --> B
+	B --> C1[call: `redisTemplate.opsForValue().set(key, value)`]
+	C1 -->|exception| C1e[logger.warn("Valkey service unavailable", e)]
+	B --> C2[conditional: `if (cassandraOperations != null)`]
+	C2 --> D[call: `cassandraOperations.insert(new KeyValue(key, value))`]
+	D -->|exception| D1[logger.warn("Cassandra service unavailable", e)]
+	B --> E[`ResponseEntity.ok("Created")`]
+```
+
+Hops explained:
+ - Request: `@PostMapping("/create")` -> `DataController.create(...)`.
+ - Valkey path: stores value with `redisTemplate.opsForValue().set(key, value)`. Exceptions are caught and logged.
+ - Cassandra path: if `cassandraOperations` is present, creates `new KeyValue(key, value)` and calls `cassandraOperations.insert(...)`. Exceptions are caught and logged.
+ - Returns `ResponseEntity.ok("Created")` unconditionally.
+
+4) PUT /api/modify/{key} (param: `value`)
+
+Mermaid flowchart:
+
+```mermaid
+flowchart TD
+	A[HTTP PUT /api/modify/{key}?value=...]
+	B[`DataController.modify(String key, String value)`]
+	A --> B
+	B --> C[call: `redisTemplate.hasKey(key)`]
+	C -->|true| D1[call: `redisTemplate.opsForValue().set(key, value)`]
+	D1 --> D2[if cassandraOperations != null -> `cassandraOperations.update(new KeyValue(key, value))`]
+	D2 -->|exception| D2e[logger.warn("Cassandra service unavailable", e)]
+	C -->|false| E[`ResponseEntity.notFound().build()`]
+	B -->|Valkey exception| F[logger.warn(...); return `ResponseEntity.ok("Modified (Valkey unavailable)")`]
+	D1 --> G[`ResponseEntity.ok("Modified")`]
+```
+
+Hops explained:
+ - Request: `@PutMapping("/modify/{key}")` -> `DataController.modify(...)`.
+ - Existence check: `redisTemplate.hasKey(key)`. If false -> return 404 via `ResponseEntity.notFound().build()`.
+ - If exists: update cache with `redisTemplate.opsForValue().set(key, value)`. Then, if `cassandraOperations` present, attempt `cassandraOperations.update(new KeyValue(key, value))` (exceptions logged).
+ - If the initial `redisTemplate` operations throw an exception, the catch logs and returns `ResponseEntity.ok("Modified (Valkey unavailable)")`.
+
+5) DELETE /api/delete/{key}
+
+Mermaid flowchart:
+
+```mermaid
+flowchart TD
+	A[HTTP DELETE /api/delete/{key}]
+	B[`DataController.delete(String key)`]
+	A --> B
+	B --> C1[call: `redisTemplate.delete(key)`]
+	C1 -->|exception| C1e[logger.warn("Valkey service unavailable", e)]
+	B --> C2[if cassandraOperations != null -> `cassandraOperations.deleteById(key, KeyValue.class)`]
+	C2 -->|exception| C2e[logger.warn("Cassandra service unavailable", e)]
+	B --> D[`ResponseEntity.ok("Deleted")`]
+```
+
+Hops explained:
+ - Request: `@DeleteMapping("/delete/{key}")` -> `DataController.delete(...)`.
+ - Deletes from Valkey with `redisTemplate.delete(key)` (exceptions logged).
+ - If `cassandraOperations` present, calls `cassandraOperations.deleteById(key, KeyValue.class)` (exceptions logged).
+ - Returns `ResponseEntity.ok("Deleted")`.
 
 ---
 
-### List Keys (`GET /api/list`)
-#### Execution Flow (Class & Function Reference)
-```
-Client Request: GET /api/list
-    |
-    v
-com.miradorstack.playground.DataController.list()
-    |
-    v
-com.miradorstack.playground.DataController -> redisTemplate.keys("*") [Valkey]
-    |
-    v
-com.miradorstack.playground.DataController (convert Set to List)
-    |
-    v
-com.miradorstack.playground.DataController (return ResponseEntity<List<String>>)
-```
-#### Implementation Details
-- **Class:** `DataController`
-- **Method:** `list()`
-    - Fetches all keys from Valkey using `redisTemplate.keys("*")`.
-    - Returns as a list.
-    - Handles Valkey service unavailability.
+## Other implementation notes (source-level facts)
+
+ - `CassandraOperations` is `@Autowired(required = false)` in `DataController` so the code actively tolerates a missing Cassandra bean — the controller checks `if (cassandraOperations != null)` before using it.
+ - `PlaygroundApplication` explicitly excludes Cassandra auto-configuration. This means Cassandra beans will not be auto-configured by Spring Boot unless configuration elsewhere re-enables them.
+ - The project includes `spring-boot-starter-data-redis` and `spring-boot-starter-data-cassandra` in `pom.xml` (see [appserver/pom.xml](appserver/pom.xml)). The code uses the specific API surface of `RedisTemplate` and `CassandraOperations`.
 
 ---
 
-### Create Key-Value (`POST /api/create`)
-#### Execution Flow (Class & Function Reference)
-```
-Client Request: POST /api/create
-    |
-    v
-com.miradorstack.playground.DataController.create(String key, String value)
-    |
-    v
-com.miradorstack.playground.DataController -> redisTemplate.opsForValue().set(key, value) [Valkey]
-    |
-    v
-com.miradorstack.playground.DataController -> cassandraOperations.insert(new KeyValue(key, value)) [Cassandra]
-    |
-    v
-com.miradorstack.playground.DataController (handle results/service errors)
-    |
-    v
-com.miradorstack.playground.DataController (return ResponseEntity<String> ("Created"))
-```
-#### Implementation Details
-- **Class:** `DataController`
-- **Method:** `create(String key, String value)`
-    - Stores key-value in Valkey and Cassandra.
-    - Handles service unavailability.
-    - Returns "Created".
-- **Supporting Classes:**
-    - `KeyValue`: Used for Cassandra insert.
+## Quick source lookup
+ - `DataController` implementation: [appserver/src/main/java/com/miradorstack/playground/DataController.java](appserver/src/main/java/com/miradorstack/playground/DataController.java)
+ - `KeyValue` model: [appserver/src/main/java/com/miradorstack/playground/KeyValue.java](appserver/src/main/java/com/miradorstack/playground/KeyValue.java)
+ - Application main: [appserver/src/main/java/com/miradorstack/playground/PlaygroundApplication.java](appserver/src/main/java/com/miradorstack/playground/PlaygroundApplication.java)
+ - OpenAPI config: [appserver/src/main/java/com/miradorstack/playground/OpenApiConfig.java](appserver/src/main/java/com/miradorstack/playground/OpenApiConfig.java)
+ - Root redirect: [appserver/src/main/java/com/miradorstack/playground/RootRedirectController.java](appserver/src/main/java/com/miradorstack/playground/RootRedirectController.java)
 
 ---
 
-### Modify Key-Value (`PUT /api/modify/{key}`)
-#### Execution Flow (Class & Function Reference)
-```
-Client Request: PUT /api/modify/{key}
-        |
-        v
-com.miradorstack.playground.DataController.modify(String key, String value)
-        |
-        v
-com.miradorstack.playground.DataController -> redisTemplate.hasKey(key) [Valkey]
-        |
-     / \
-    v   v
-Exists Not Exists
-    |      |
-    v      v
-com.miradorstack.playground.DataController -> redisTemplate.opsForValue().set(key, value) [Valkey]
-com.miradorstack.playground.DataController -> cassandraOperations.update(new KeyValue(key, value)) [Cassandra]
-    |
-    v
-com.miradorstack.playground.DataController (return ResponseEntity<String> ("Modified"))
-                |
-                v
-Return 404 Not Found
-```
-#### Implementation Details
-- **Class:** `DataController`
-- **Method:** `modify(String key, String value)`
-    - Checks existence in Valkey.
-    - Updates value in Valkey and Cassandra if present.
-    - Returns "Modified" or 404 if not found.
+If you'd like, I can now:
+ - Add line-numbered references into each hop for quicker navigation.
+ - Produce printable PNG/SVG versions of the mermaid diagrams.
+ - Run a quick local smoke test (if you want me to start the app here).
 
----
+----
 
-### Delete Key-Value (`DELETE /api/delete/{key}`)
-#### Execution Flow (Class & Function Reference)
-```
-Client Request: DELETE /api/delete/{key}
-    |
-    v
-com.miradorstack.playground.DataController.delete(String key)
-    |
-    v
-com.miradorstack.playground.DataController -> redisTemplate.delete(key) [Valkey]
-    |
-    v
-com.miradorstack.playground.DataController -> cassandraOperations.deleteById(key, KeyValue.class) [Cassandra]
-    |
-    v
-com.miradorstack.playground.DataController (handle results/service errors)
-    |
-    v
-com.miradorstack.playground.DataController (return ResponseEntity<String> ("Deleted"))
-```
-#### Implementation Details
-- **Class:** `DataController`
-- **Method:** `delete(String key)`
-    - Deletes key from Valkey and Cassandra.
-    - Handles service unavailability.
-    - Returns "Deleted".
-
----
-
-## Class Implementation Details
-
-### DataController
-- **Annotations:**
-    - `@RestController`, `@RequestMapping("/api")`, `@Tag`
-- **Dependencies:**
-    - `RedisTemplate<String, String>`: Autowired for Valkey operations.
-    - `CassandraOperations`: Autowired for Cassandra operations.
-- **Logging:**
-    - Uses SLF4J `Logger` for warnings/errors.
-- **API Methods:**
-    - `read(String key)`: Read from both stores.
-    - `list()`: List all keys from Valkey.
-    - `create(String key, String value)`: Create in both stores.
-    - `modify(String key, String value)`: Update in both stores.
-    - `delete(String key)`: Delete from both stores.
-
-### KeyValue
-- **Annotations:**
-    - `@Table("key_value")`, `@PrimaryKey`
-- **Fields:**
-    - `key`: String (Primary Key)
-    - `value`: String
-- **Usage:**
-    - Used for Cassandra persistence.
-
-### OpenApiConfig
-- **Annotations:**
-    - `@Configuration`, `@Bean`
-- **Purpose:**
-    - Configures OpenAPI/Swagger documentation.
-
-### PlaygroundApplication
-- **Annotations:**
-    - `@SpringBootApplication(exclude = {CassandraAutoConfiguration.class, CassandraDataAutoConfiguration.class})`
-- **Purpose:**
-    - Main entry point for Spring Boot application.
-
-### RootRedirectController
-- **Annotations:**
-    - `@Controller`
-- **Purpose:**
-    - Redirects root path `/` to Swagger UI.
-
----
-
-## Notes
-- All error handling is done via logging and fallback responses.
-- Dual storage ensures both cache and persistence for all operations.
-- API documentation is auto-generated and accessible via Swagger UI.
-
----
-
-*This document is strictly based on the actual source code. No assumptions or guesses have been made.*
+Generated from the repository source (no assumptions beyond code).
