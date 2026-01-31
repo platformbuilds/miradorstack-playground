@@ -46,16 +46,16 @@ Mermaid flowchart (code-level hops):
 ```mermaid
 flowchart TD
   A[HTTP GET /api/read/&#123;key&#125;]
-  B["DataController.read(String key)"]
+  B[DataController.read String key]
   A --> B
-  B --> C1["call: redisTemplate.opsForValue().get(key)"]
-  B --> C2["conditional: if (cassandraOperations != null)"]
-  C2 --> D1["call: cassandraOperations.selectOneById(key, KeyValue.class)"]
-  D1 --> E1["KeyValue.getValue() if result != null"]
-  C2 -->|else| E2[put "Service unavailable" for cassandra]
-  C1 --> F1["map valkey -> result.put('valkey', value or 'Not found')"]
-  D1 --> F2["map cassandra -> result.put('cassandra', value or 'Not found')"]
-  B --> G["return ResponseEntity.ok(result)"]
+  B --> C1[call redisTemplate opsForValue get key]
+  B --> C2[conditional if cassandraOperations not null]
+  C2 --> D1[call cassandraOperations selectOneById key KeyValue.class]
+  D1 --> E1[KeyValue.getValue if result not null]
+  C2 -->|else| E2[put Service unavailable for cassandra]
+  C1 --> F1[map valkey to result valkey or Not found]
+  D1 --> F2[map cassandra to result cassandra or Not found]
+  B --> G[return ResponseEntity ok result]
 ```
 
 Hops explained (source references):
@@ -72,12 +72,12 @@ Mermaid flowchart:
 ```mermaid
 flowchart TD
   A[HTTP GET /api/list]
-  B["DataController.list()"]
+  B[DataController.list]
   A --> B
-  B --> C["call: redisTemplate.keys('*')"]
-  C --> D["wrap Set<String> into new ArrayList<>(keysSet)"]
-  B --> E["ResponseEntity.ok(list)"]
-  B -->|exception| F["logger.warn(...); return ResponseEntity.ok(Collections.emptyList())"]
+  B --> C[call redisTemplate keys star]
+  C --> D[wrap Set into new ArrayList keysSet]
+  B --> E[ResponseEntity ok list]
+  B -->|exception| F[logger warn and return empty list]
 ```
 
 Hops explained:
@@ -91,15 +91,15 @@ Mermaid flowchart:
 
 ```mermaid
 flowchart TD
-  A[HTTP POST /api/create?key=...&value=...]
-  B["DataController.create(String key, String value)"]
+  A[HTTP POST /api/create key value]
+  B[DataController.create key value]
   A --> B
-  B --> C1["call: redisTemplate.opsForValue().set(key, value)"]
-  C1 -->|exception| C1e["logger.warn('Valkey service unavailable', e)"]
-  B --> C2["conditional: if (cassandraOperations != null)"]
-  C2 --> D["call: cassandraOperations.insert(new KeyValue(key, value))"]
-  D -->|exception| D1["logger.warn('Cassandra service unavailable', e)"]
-  B --> E["ResponseEntity.ok('Created')"]
+  B --> C1[call redisTemplate opsForValue set key value]
+  C1 -->|exception| C1e[logger warn Valkey service unavailable]
+  B --> C2[conditional if cassandraOperations not null]
+  C2 --> D[call cassandraOperations insert new KeyValue key value]
+  D -->|exception| D1[logger warn Cassandra service unavailable]
+  B --> E[ResponseEntity ok Created]
 ```
 
 Hops explained:
@@ -114,16 +114,16 @@ Mermaid flowchart:
 
 ```mermaid
 flowchart TD
-  A[HTTP PUT /api/modify/&#123;key&#125;?value=...]
-  B["DataController.modify(String key, String value)"]
+  A[HTTP PUT /api/modify/&#123;key&#125; value param]
+  B[DataController.modify key value]
   A --> B
-  B --> C["call: redisTemplate.hasKey(key)"]
-  C -->|true| D1["call: redisTemplate.opsForValue().set(key, value)"]
-  D1 --> D2["if cassandraOperations != null -> cassandraOperations.update(new KeyValue(key, value))"]
-  D2 -->|exception| D2e["logger.warn('Cassandra service unavailable', e)"]
-  C -->|false| E["ResponseEntity.notFound().build()"]
-  B -->|Valkey exception| F["logger.warn(...); return ResponseEntity.ok('Modified (Valkey unavailable)')"]
-  D1 --> G["ResponseEntity.ok('Modified')"]
+  B --> C[call redisTemplate hasKey key]
+  C -->|true| D1[call redisTemplate opsForValue set key value]
+  D1 --> D2[if cassandraOperations not null then cassandraOperations update new KeyValue key value]
+  D2 -->|exception| D2e[logger warn Cassandra service unavailable]
+  C -->|false| E[ResponseEntity notFound]
+  B -->|Valkey exception| F[logger warn and return Modified Valkey unavailable]
+  D1 --> G[ResponseEntity ok Modified]
 ```
 
 Hops explained:
@@ -139,13 +139,13 @@ Mermaid flowchart:
 ```mermaid
 flowchart TD
   A[HTTP DELETE /api/delete/&#123;key&#125;]
-  B["DataController.delete(String key)"]
+  B[DataController.delete key]
   A --> B
-  B --> C1["call: redisTemplate.delete(key)"]
-  C1 -->|exception| C1e["logger.warn('Valkey service unavailable', e)"]
-  B --> C2["if cassandraOperations != null -> cassandraOperations.deleteById(key, KeyValue.class)"]
-  C2 -->|exception| C2e["logger.warn('Cassandra service unavailable', e)"]
-  B --> D["ResponseEntity.ok('Deleted')"]
+  B --> C1[call redisTemplate delete key]
+  C1 -->|exception| C1e[logger warn Valkey service unavailable]
+  B --> C2[if cassandraOperations not null then cassandraOperations deleteById key KeyValue.class]
+  C2 -->|exception| C2e[logger warn Cassandra service unavailable]
+  B --> D[ResponseEntity ok Deleted]
 ```
 
 Hops explained:
