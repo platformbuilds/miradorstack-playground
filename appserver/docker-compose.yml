@@ -76,6 +76,8 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
+    volumes:
+      - ./jfr-recordings:/app/jfr-recordings
     environment:
       - CASSANDRA_HOST=cassandra
       - CASSANDRA_PORT=9042

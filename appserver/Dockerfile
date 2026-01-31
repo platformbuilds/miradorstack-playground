@@ -12,8 +12,13 @@ COPY src ./src
 # Build the application
 RUN mvn clean package -DskipTests -B
 
+# Create directory for JFR recordings
+RUN mkdir -p /app/jfr-recordings
+
 # Expose port
 EXPOSE 8080
 
-# Run the application
-CMD ["java", "-jar", "target/playground-0.0.1-SNAPSHOT.jar"]
+# Run the application with JFR continuous recording
+CMD ["java", \
+     "-XX:StartFlightRecording=name=continuous,settings=profile,disk=true,dumponexit=true,maxage=24h,filename=/app/jfr-recordings/app.jfr", \
+     "-jar", "target/playground-0.0.1-SNAPSHOT.jar"]
