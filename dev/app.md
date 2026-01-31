@@ -22,18 +22,14 @@ This document provides a deep technical dive into the engineering implementation
 ## API Deep Dive
 
 ### Read Key (`GET /api/read/{key}`)
-#### Flow Chart
-```mermaid
-graph TD
-    A[Client Request: GET /api/read/{key}] --> B[DataController.read(key)]
-    B --> C[Read from Valkey (redisTemplate.opsForValue().get)]
-    B --> D[Read from Cassandra (cassandraOperations.selectOneById)]
-    C --> E[Handle Valkey result]
-    D --> F[Handle Cassandra result]
-    E --> G[Build response map]
-    F --> G
-    G --> H[Return ResponseEntity<Map<String, String>>]
-```
+#### Execution Flow (Step-by-Step)
+1. Client sends GET request to `/api/read/{key}`
+2. `DataController.read(key)` is invoked
+3. Read value from Valkey using `redisTemplate.opsForValue().get(key)`
+4. Read value from Cassandra using `cassandraOperations.selectOneById(key, KeyValue.class)`
+5. Handle results and service unavailability for both stores
+6. Build response map with results from Valkey and Cassandra
+7. Return `ResponseEntity<Map<String, String>>` to client
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `read(String key)`
@@ -48,14 +44,12 @@ graph TD
 ---
 
 ### List Keys (`GET /api/list`)
-#### Flow Chart
-```mermaid
-graph TD
-    A[Client Request: GET /api/list] --> B[DataController.list()]
-    B --> C[Fetch all keys from Valkey (redisTemplate.keys)]
-    C --> D[Convert Set to List]
-    D --> E[Return ResponseEntity<List<String>>]
-```
+#### Execution Flow (Step-by-Step)
+1. Client sends GET request to `/api/list`
+2. `DataController.list()` is invoked
+3. Fetch all keys from Valkey using `redisTemplate.keys("*")`
+4. Convert the set of keys to a list
+5. Return `ResponseEntity<List<String>>` to client
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `list()`
@@ -66,17 +60,13 @@ graph TD
 ---
 
 ### Create Key-Value (`POST /api/create`)
-#### Flow Chart
-```mermaid
-graph TD
-    A[Client Request: POST /api/create] --> B[DataController.create(key, value)]
-    B --> C[Store in Valkey (redisTemplate.opsForValue().set)]
-    B --> D[Store in Cassandra (cassandraOperations.insert)]
-    C --> E[Handle Valkey result]
-    D --> F[Handle Cassandra result]
-    E --> G[Return ResponseEntity<String>]
-    F --> G
-```
+#### Execution Flow (Step-by-Step)
+1. Client sends POST request to `/api/create` with `key` and `value` parameters
+2. `DataController.create(key, value)` is invoked
+3. Store key-value in Valkey using `redisTemplate.opsForValue().set(key, value)`
+4. Store key-value in Cassandra using `cassandraOperations.insert(new KeyValue(key, value))`
+5. Handle results and service unavailability for both stores
+6. Return `ResponseEntity<String>` ("Created") to client
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `create(String key, String value)`
@@ -89,16 +79,16 @@ graph TD
 ---
 
 ### Modify Key-Value (`PUT /api/modify/{key}`)
-#### Flow Chart
-```mermaid
-graph TD
-    A[Client Request: PUT /api/modify/{key}] --> B[DataController.modify(key, value)]
-    B --> C[Check if key exists in Valkey (redisTemplate.hasKey)]
-    C -->|Exists| D[Update in Valkey (redisTemplate.opsForValue().set)]
-    D --> E[Update in Cassandra (cassandraOperations.update)]
-    E --> F[Return ResponseEntity<String>]
-    C -->|Not Exists| G[Return 404]
-```
+#### Execution Flow (Step-by-Step)
+1. Client sends PUT request to `/api/modify/{key}` with `value` parameter
+2. `DataController.modify(key, value)` is invoked
+3. Check if key exists in Valkey using `redisTemplate.hasKey(key)`
+4. If key exists:
+    - Update value in Valkey using `redisTemplate.opsForValue().set(key, value)`
+    - Update value in Cassandra using `cassandraOperations.update(new KeyValue(key, value))`
+    - Return `ResponseEntity<String>` ("Modified")
+5. If key does not exist:
+    - Return 404 Not Found
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `modify(String key, String value)`
@@ -109,17 +99,13 @@ graph TD
 ---
 
 ### Delete Key-Value (`DELETE /api/delete/{key}`)
-#### Flow Chart
-```mermaid
-graph TD
-    A[Client Request: DELETE /api/delete/{key}] --> B[DataController.delete(key)]
-    B --> C[Delete from Valkey (redisTemplate.delete)]
-    B --> D[Delete from Cassandra (cassandraOperations.deleteById)]
-    C --> E[Handle Valkey result]
-    D --> F[Handle Cassandra result]
-    E --> G[Return ResponseEntity<String>]
-    F --> G
-```
+#### Execution Flow (Step-by-Step)
+1. Client sends DELETE request to `/api/delete/{key}`
+2. `DataController.delete(key)` is invoked
+3. Delete key from Valkey using `redisTemplate.delete(key)`
+4. Delete key from Cassandra using `cassandraOperations.deleteById(key, KeyValue.class)`
+5. Handle results and service unavailability for both stores
+6. Return `ResponseEntity<String>` ("Deleted") to client
 #### Implementation Details
 - **Class:** `DataController`
 - **Method:** `delete(String key)`
