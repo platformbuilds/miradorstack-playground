@@ -20,5 +20,6 @@ EXPOSE 8080
 
 # Run the application with JFR continuous recording
 CMD ["java", \
-     "-XX:StartFlightRecording=name=continuous,settings=profile,disk=true,dumponexit=true,maxage=24h,filename=/app/jfr-recordings/app.jfr", \
+     "-XX:StartFlightRecording=name=continuous,settings=profile,disk=true,dumponexit=true,maxage=24h,maxsize=250M,filename=/app/jfr-recordings/app-%t.jfr", \
+     "-XX:FlightRecorderOptions=repository=/app/jfr-recordings", \
      "-jar", "target/playground-0.0.1-SNAPSHOT.jar"]
