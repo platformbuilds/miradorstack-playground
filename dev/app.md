@@ -22,27 +22,27 @@ This document provides a deep technical dive into the engineering implementation
 ## API Deep Dive
 
 ### Read Key (`GET /api/read/{key}`)
-#### Execution Flow (ASCII Flow Chart)
+#### Execution Flow (Class & Function Reference)
 ```
 Client Request: GET /api/read/{key}
     |
     v
-DataController.read(key)
+com.miradorstack.playground.DataController.read(String key)
     |
     v
------------------------------
-|  Read from Valkey          |
-|  Read from Cassandra       |
------------------------------
+com.miradorstack.playground.DataController -> redisTemplate.opsForValue().get(key) [Valkey]
     |
     v
-Handle results/service errors
+com.miradorstack.playground.DataController -> cassandraOperations.selectOneById(key, KeyValue.class) [Cassandra]
     |
     v
-Build response map
+com.miradorstack.playground.DataController (handle results/service errors)
     |
     v
-Return ResponseEntity<Map<String, String>>
+com.miradorstack.playground.DataController (build response map)
+    |
+    v
+com.miradorstack.playground.DataController (return ResponseEntity<Map<String, String>>)
 ```
 #### Implementation Details
 - **Class:** `DataController`
@@ -58,21 +58,21 @@ Return ResponseEntity<Map<String, String>>
 ---
 
 ### List Keys (`GET /api/list`)
-#### Execution Flow (ASCII Flow Chart)
+#### Execution Flow (Class & Function Reference)
 ```
 Client Request: GET /api/list
     |
     v
-DataController.list()
+com.miradorstack.playground.DataController.list()
     |
     v
-Fetch all keys from Valkey
+com.miradorstack.playground.DataController -> redisTemplate.keys("*") [Valkey]
     |
     v
-Convert Set to List
+com.miradorstack.playground.DataController (convert Set to List)
     |
     v
-Return ResponseEntity<List<String>>
+com.miradorstack.playground.DataController (return ResponseEntity<List<String>>)
 ```
 #### Implementation Details
 - **Class:** `DataController`
@@ -84,24 +84,24 @@ Return ResponseEntity<List<String>>
 ---
 
 ### Create Key-Value (`POST /api/create`)
-#### Execution Flow (ASCII Flow Chart)
+#### Execution Flow (Class & Function Reference)
 ```
 Client Request: POST /api/create
     |
     v
-DataController.create(key, value)
+com.miradorstack.playground.DataController.create(String key, String value)
     |
     v
------------------------------
-| Store in Valkey            |
-| Store in Cassandra         |
------------------------------
+com.miradorstack.playground.DataController -> redisTemplate.opsForValue().set(key, value) [Valkey]
     |
     v
-Handle results/service errors
+com.miradorstack.playground.DataController -> cassandraOperations.insert(new KeyValue(key, value)) [Cassandra]
     |
     v
-Return ResponseEntity<String> ("Created")
+com.miradorstack.playground.DataController (handle results/service errors)
+    |
+    v
+com.miradorstack.playground.DataController (return ResponseEntity<String> ("Created"))
 ```
 #### Implementation Details
 - **Class:** `DataController`
@@ -115,27 +115,29 @@ Return ResponseEntity<String> ("Created")
 ---
 
 ### Modify Key-Value (`PUT /api/modify/{key}`)
-#### Execution Flow (ASCII Flow Chart)
+#### Execution Flow (Class & Function Reference)
 ```
 Client Request: PUT /api/modify/{key}
-                |
-                v
-DataController.modify(key, value)
-                |
-                v
-Check if key exists in Valkey
-                |
-            /   \
-         v     v
-Exists   Not Exists
-    |         |
-    v         v
-Update in   Return 404
-Valkey &
-Cassandra
+        |
+        v
+com.miradorstack.playground.DataController.modify(String key, String value)
+        |
+        v
+com.miradorstack.playground.DataController -> redisTemplate.hasKey(key) [Valkey]
+        |
+     / \
+    v   v
+Exists Not Exists
+    |      |
+    v      v
+com.miradorstack.playground.DataController -> redisTemplate.opsForValue().set(key, value) [Valkey]
+com.miradorstack.playground.DataController -> cassandraOperations.update(new KeyValue(key, value)) [Cassandra]
     |
     v
-Return ResponseEntity<String> ("Modified")
+com.miradorstack.playground.DataController (return ResponseEntity<String> ("Modified"))
+                |
+                v
+Return 404 Not Found
 ```
 #### Implementation Details
 - **Class:** `DataController`
@@ -147,24 +149,24 @@ Return ResponseEntity<String> ("Modified")
 ---
 
 ### Delete Key-Value (`DELETE /api/delete/{key}`)
-#### Execution Flow (ASCII Flow Chart)
+#### Execution Flow (Class & Function Reference)
 ```
 Client Request: DELETE /api/delete/{key}
     |
     v
-DataController.delete(key)
+com.miradorstack.playground.DataController.delete(String key)
     |
     v
------------------------------
-| Delete from Valkey         |
-| Delete from Cassandra      |
------------------------------
+com.miradorstack.playground.DataController -> redisTemplate.delete(key) [Valkey]
     |
     v
-Handle results/service errors
+com.miradorstack.playground.DataController -> cassandraOperations.deleteById(key, KeyValue.class) [Cassandra]
     |
     v
-Return ResponseEntity<String> ("Deleted")
+com.miradorstack.playground.DataController (handle results/service errors)
+    |
+    v
+com.miradorstack.playground.DataController (return ResponseEntity<String> ("Deleted"))
 ```
 #### Implementation Details
 - **Class:** `DataController`
