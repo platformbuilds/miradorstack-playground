@@ -39,13 +39,13 @@ This document maps every REST API implemented in the codebase to the exact class
 
 Important: every flow below uses only classes/method names present in the project or explicitly invoked by them. External library method names are included where invoked directly in source.
 
-1) GET /api/read/{key}
+1) GET /api/read/&#123;key&#125;
 
 Mermaid flowchart (code-level hops):
 
 ```mermaid
 flowchart TD
-  A[HTTP GET /api/read/{key}]
+  A[HTTP GET /api/read/&#123;key&#125;]
   B["DataController.read(String key)"]
   A --> B
   B --> C1["call: redisTemplate.opsForValue().get(key)"]
@@ -108,13 +108,13 @@ Hops explained:
  - Cassandra path: if `cassandraOperations` is present, creates `new KeyValue(key, value)` and calls `cassandraOperations.insert(...)`. Exceptions are caught and logged.
  - Returns `ResponseEntity.ok("Created")` unconditionally.
 
-4) PUT /api/modify/{key} (param: `value`)
+4) PUT /api/modify/&#123;key&#125; (param: `value`)
 
 Mermaid flowchart:
 
 ```mermaid
 flowchart TD
-  A[HTTP PUT /api/modify/{key}?value=...]
+  A[HTTP PUT /api/modify/&#123;key&#125;?value=...]
   B["DataController.modify(String key, String value)"]
   A --> B
   B --> C["call: redisTemplate.hasKey(key)"]
@@ -132,13 +132,13 @@ Hops explained:
  - If exists: update cache with `redisTemplate.opsForValue().set(key, value)`. Then, if `cassandraOperations` present, attempt `cassandraOperations.update(new KeyValue(key, value))` (exceptions logged).
  - If the initial `redisTemplate` operations throw an exception, the catch logs and returns `ResponseEntity.ok("Modified (Valkey unavailable)")`.
 
-5) DELETE /api/delete/{key}
+5) DELETE /api/delete/&#123;key&#125;
 
 Mermaid flowchart:
 
 ```mermaid
 flowchart TD
-  A[HTTP DELETE /api/delete/{key}]
+  A[HTTP DELETE /api/delete/&#123;key&#125;]
   B["DataController.delete(String key)"]
   A --> B
   B --> C1["call: redisTemplate.delete(key)"]
